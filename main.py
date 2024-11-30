@@ -1,8 +1,10 @@
 from contextlib import asynccontextmanager
 import os
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from routers.payment import payment_router
 from utils.database_config import DatabaseConfig
@@ -26,6 +28,15 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan, title="결제 API", version="ver.1")
 
 app.include_router(payment_router, prefix="/api/v1/payments")
+
+@app.get("/health", status_code=status.HTTP_200_OK)
+async def health_check() -> dict:
+    return {"status" : "ok"}
+
+FastAPIInstrumentor.instrument_app(app)
+
+instrumentator = Instrumentator()
+instrumentator.instrument(app).expose(app)
 
 app.add_middleware(
     CORSMiddleware,
