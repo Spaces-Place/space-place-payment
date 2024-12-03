@@ -92,6 +92,9 @@ async def payment_ready(
 
     try:
         async with httpx.AsyncClient() as client:
+            # 요청 전 데이터 로깅
+            print("Request data:", payment_data.model_dump())
+            
             response = await client.post(
                 f"{kakaopay_url}/online/v1/payment/ready",
                 data=payment_data.model_dump_json(),
@@ -99,23 +102,20 @@ async def payment_ready(
                     "Authorization": f"SECRET_KEY {kakao_secret_key}",
                     "Content-Type": "application/json"
                 }
-        )
-
-        # 요청 데이터 로깅 추가
-        print("Request data:", payment_data.model_dump())
-        
-        if response.status_code != 200:
-            # 에러 응답 내용 로깅
-            error_content = await response.json()
-            print("Error response:", error_content)
-        
-        response.raise_for_status()
-        ready_completed_result = response.json()
-        next_redirect_pc_url = ready_completed_result.get('next_redirect_pc_url')
-        tid = ready_completed_result.get('tid')
+            )
+            
+            if response.status_code != 200:
+                # 에러 응답 내용 로깅
+                error_content = await response.text()
+                print("Error response:", error_content)
+            
+            response.raise_for_status()
+            ready_completed_result = response.json()
+            next_redirect_pc_url = ready_completed_result.get('next_redirect_pc_url')
+            tid = ready_completed_result.get('tid')
 
     except httpx.HTTPError as e:
-        error_detail = e.response.json() if e.response else "No response"
+        error_detail = await e.response.text() if e.response else "No response"
         print(f"KakaoPay API Error: {error_detail}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
