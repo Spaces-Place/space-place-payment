@@ -116,25 +116,31 @@ async def payment_ready(
                     "Content-Type": "application/json"
                 }
             )
+        
+        if response.status_code != 200:
+            try:
+                error_response = response.json()
+                print("Error response (JSON):", error_response)
+            except:
+                error_response = "Error details not available"
+                print("Error response:", error_response)
+        
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"카카오페이 요청 실패: {error_response}"
+            )
             
-            if response.status_code != 200:
-                # 에러 응답 내용 로깅
-                error_content = await response.text()
-                print("Error response:", error_content)
-                response.raise_for_status()
-            
-            ready_completed_result = response.json()
-            next_redirect_pc_url = ready_completed_result.get('next_redirect_pc_url')
-            tid = ready_completed_result.get('tid')
+        ready_completed_result = response.json()
+        next_redirect_pc_url = ready_completed_result.get('next_redirect_pc_url')
+        tid = ready_completed_result.get('tid')
 
     except httpx.HTTPError as e:
-        error_detail = await e.response.text() if e.response else "No response"
+        error_detail = str(e)
         print(f"KakaoPay API Error: {error_detail}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"카카오페이 요청 실패: {error_detail}"
         )
-
         
     # tid 포함된 결제 정보 저장
     new_payment = Payment(
