@@ -90,34 +90,52 @@ async def payment_ready(
 
     # 카카오: 카카오 결제 준비
     payment_data = KakaoPayReady(
-        cid= 'TC0ONETIME',
-        partner_order_id= order_number,
-        partner_user_id= user_id,
-        item_name= space_name,
-        quantity= int(quantity),
-        total_amount= int(total_amount),
-        tax_free_amount= int(total_amount),
-        approval_url= f"{payment_url}/payments/kakao/approval?order_number={order_number}",
-        cancel_url= f"{payment_url}/payments/kakao/cancel?order_number={order_number}",
-        fail_url= f"{payment_url}/payments/kakao/fail?order_number={order_number}"
+    cid= 'TC0ONETIME',
+    partner_order_id= order_number,
+    partner_user_id= user_id,
+    item_name= space_name,
+    quantity= int(quantity),
+    total_amount= int(total_amount),
+    tax_free_amount= int(total_amount),
+    approval_url= f"{payment_url}/payments/kakao/approval?order_number={order_number}",
+    cancel_url= f"{payment_url}/payments/kakao/cancel?order_number={order_number}",
+    fail_url= f"{payment_url}/payments/kakao/fail?order_number={order_number}"
     )
 
-    logger.info(f'카카오 결제 준비 요청: {kakaopay_url}')
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            f"{kakaopay_url}/online/v1/payment/ready",
-            data=payment_data.model_dump_json(),
-            headers={
-                "Authorization": f"SECRET_KEY {kakao_secret_key}",
-                "Content-Type": "application/json"
-            }
+
+    try:
+       logger.info(f'카카오 결제 준비 요청: {kakaopay_url}')
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{kakaopay_url}/online/v1/payment/ready",
+                data=payment_data.model_dump_json(),
+                headers={
+                    "Authorization": f"SECRET_KEY {kakao_secret_key}",
+                    "Content-Type": "application/json"
+                }
         )
+
+        # 요청 데이터 로깅 추가
+        print("Request data:", payment_data.model_dump())
+        
+        if response.status_code != 200:
+            # 에러 응답 내용 로깅
+            error_content = await response.json()
+            print("Error response:", error_content)
+        
         response.raise_for_status()
-        ready_completed_result=response.json()
+        ready_completed_result = response.json()
         next_redirect_pc_url = ready_completed_result.get('next_redirect_pc_url')
-        tid=ready_completed_result.get('tid')
-    logger.info(f'next_redirect_pc_url: {next_redirect_pc_url}')
-    logger.info(f'tid: {tid}')
+        tid = ready_completed_result.get('tid')
+
+    except httpx.HTTPError as e:
+        error_detail = e.response.json() if e.response else "No response"
+        print(f"KakaoPay API Error: {error_detail}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"카카오페이 요청 실패: {error_detail}"
+        )
+
         
     # tid 포함된 결제 정보 저장
     new_payment = Payment(
