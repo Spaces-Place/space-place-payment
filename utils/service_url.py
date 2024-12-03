@@ -1,3 +1,4 @@
+import logging
 import os
 from utils.aws_ssm import ParameterStore
 from utils.env_config import get_env_config
@@ -5,6 +6,7 @@ from utils.env_config import get_env_config
 
 class ServiceUrlConfig:
     _instance = None
+    _logger = logging.getLogger()
 
     def __new__(cls):
         if cls._instance is None:
@@ -27,10 +29,10 @@ class ServiceUrlConfig:
             }
         else:
             self._urls = {
-                'reservation': self._parameter_store.get_parameter('RESERVATION_URL'),
-                'payment': self._parameter_store.get_parameter('PAYMENT_URL'),
-                'space': self._parameter_store.get_parameter('SPACE_URL'),
-                'member': self._parameter_store.get_parameter('USER_URL'),
+                'reservation': self._parameter_store.get_parameter('RESERVATION_URL').strip(),
+                'payment': self._parameter_store.get_parameter('PAYMENT_URL').strip(),
+                'space': self._parameter_store.get_parameter('SPACE_URL').strip(),
+                'member': self._parameter_store.get_parameter('USER_URL').strip(),
             }
 
     @property
