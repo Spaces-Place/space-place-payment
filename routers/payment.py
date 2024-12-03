@@ -121,8 +121,8 @@ async def payment_ready(
                 # 에러 응답 내용 로깅
                 error_content = await response.text()
                 print("Error response:", error_content)
+                response.raise_for_status()
             
-            response.raise_for_status()
             ready_completed_result = response.json()
             next_redirect_pc_url = ready_completed_result.get('next_redirect_pc_url')
             tid = ready_completed_result.get('tid')
