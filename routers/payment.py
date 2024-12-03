@@ -104,7 +104,6 @@ async def payment_ready(
 
 
     try:
-       logger.info(f'카카오 결제 준비 요청: {kakaopay_url}')
         async with httpx.AsyncClient() as client:
             # 요청 전 데이터 로깅
             print("Request data:", payment_data.model_dump())
