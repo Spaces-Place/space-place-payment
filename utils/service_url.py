@@ -26,9 +26,9 @@ class ServiceUrlConfig:
             }
         else:
             self._urls = {
-                'reservation': self._parameter_store.get_parameter('RESERVATION_URL'),
-                'payment': self._parameter_store.get_parameter('PAYMENT_URL'),
-                'space': self._parameter_store.get_parameter('SPACE_URL'),
+                'reservation': self._parameter_store.get_parameter('RESERVATION_URL').strip(),
+                'payment': self._parameter_store.get_parameter('PAYMENT_URL').strip(),
+                'space': self._parameter_store.get_parameter('SPACE_URL').strip(),
             }
 
     @property
