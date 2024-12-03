@@ -118,17 +118,24 @@ async def payment_ready(
             )
             
             if response.status_code != 200:
-                # 에러 응답 내용 로깅
-                error_content = await response.text()
-                print("Error response:", error_content)
-                response.raise_for_status()
-            
+                try:
+                    error_response = response.json()
+                    print("Error response (JSON):", error_response)
+                except:
+                    error_text = response.read().decode()
+                    print("Error response (Text):", error_text)
+                    
+            response.raise_for_status()
             ready_completed_result = response.json()
             next_redirect_pc_url = ready_completed_result.get('next_redirect_pc_url')
             tid = ready_completed_result.get('tid')
 
     except httpx.HTTPError as e:
-        error_detail = await e.response.text() if e.response else "No response"
+        try:
+            error_response = e.response.json()
+            error_detail = error_response
+        except:
+            error_detail = str(e)
         print(f"KakaoPay API Error: {error_detail}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
