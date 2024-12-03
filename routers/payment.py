@@ -1,5 +1,6 @@
 from datetime import datetime
 import json
+import logging
 from typing import Dict
 from fastapi import APIRouter, Depends, HTTPException, Header, status
 import httpx
@@ -20,6 +21,8 @@ from utils.service_url import ServiceUrlConfig
 
 payment_router = APIRouter(tags=["결제"])
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # 결제 요청
 @payment_router.post(
@@ -46,6 +49,7 @@ async def payment_ready(
     user_token = authorization.split(" ")[1]
 
 
+    logger.info(f'예약 번호 요청: {reservation_url}')
     # 예약: 예약 번호 요청
     async with httpx.AsyncClient() as client:
         response = await client.post(
@@ -59,6 +63,10 @@ async def payment_ready(
         response.raise_for_status()
         response_data=response.json()
         order_number=response_data.get("order_number")
+    logger.info(f'{order_number}')
+
+    logger.info(f'공간 정보 요청: {space_url}')
+    logger.info(f'요청 데이터: {json.dumps(payment_request.model_dump(), ensure_ascii=False)}')
 
     # 공간: 이름, 가격 정보 받아오기(space_id, use_date, start_time, end_time) -> (space_name, unit_price)
     async with httpx.AsyncClient() as client:
@@ -76,6 +84,10 @@ async def payment_ready(
         total_amount=response_data.get("total_amount")
         quantity=response_data.get("quantity")
 
+    logger.info(f'space_name: {space_name}')
+    logger.info(f'total_amount: {total_amount}')
+    logger.info(f'quantity: {quantity}')
+
     # 카카오: 카카오 결제 준비
     payment_data = KakaoPayReady(
     cid= 'TC0ONETIME',
@@ -90,7 +102,9 @@ async def payment_ready(
     fail_url= f"{payment_url}/payments/kakao/fail?order_number={order_number}"
     )
 
+
     try:
+       logger.info(f'카카오 결제 준비 요청: {kakaopay_url}')
         async with httpx.AsyncClient() as client:
             # 요청 전 데이터 로깅
             print("Request data:", payment_data.model_dump())
@@ -121,6 +135,7 @@ async def payment_ready(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"카카오페이 요청 실패: {error_detail}"
         )
+
         
     # tid 포함된 결제 정보 저장
     new_payment = Payment(
@@ -137,6 +152,8 @@ async def payment_ready(
     await session.refresh(new_payment)
     payment_id = new_payment.id
 
+
+    logger.info(f'예약 payment_id 저장: {reservation_url}')
     # 예약: payment_id 저장
     async with httpx.AsyncClient() as client:
         response = await client.patch(
@@ -192,6 +209,7 @@ async def payment_approve(
         pg_token= pg_token,
     )
 
+    logger.info(f'카카오 결제 승인 요청: {kakaopay_url}')
     # 카카오: 결제 승인
     async with httpx.AsyncClient() as client:
         response = await client.post(
@@ -204,6 +222,7 @@ async def payment_approve(
         )
         response.raise_for_status()
         approval_result=response.json()
+    logger.info(f'approval_result: {approval_result}')    
 
     # 여기까지 결제 승인된 상태
     payment_method_type = approval_result.get("payment_method_type")
@@ -214,6 +233,7 @@ async def payment_approve(
     payment.p_status = PaymentStatus.COMPLETED
     await session.commit()
 
+    logger.info(f'예약 상태 업데이트: {reservation_url}')
     # 예약: 예약 상태 업데이트
     async with httpx.AsyncClient() as client:
         response = await client.patch(
@@ -225,6 +245,7 @@ async def payment_approve(
             }
         )
         response.raise_for_status()
+    logger.info(f'order_number: {order_number}')
 
     return PaymentApproveResponse(
         message="예약 및 결제가 완료되었습니다.",
@@ -261,6 +282,7 @@ async def payment_approve(
     payment.p_status = PaymentStatus.FAILED
     await session.commit()
 
+    logger.info(f'예약 상태 업데이트: {reservation_url}')
     # 예약: 예약 상태 업데이트
     async with httpx.AsyncClient() as client:
         response = await client.patch(
@@ -272,6 +294,7 @@ async def payment_approve(
             }
         )
         response.raise_for_status()
+    logger.info(f'order_number: {order_number}')
 
     return BaseResponse(message="예약 및 결제가 실패했습니다.")
 
