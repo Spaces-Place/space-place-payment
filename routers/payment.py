@@ -94,9 +94,9 @@ async def payment_ready(
         partner_order_id= order_number,
         partner_user_id= user_id,
         item_name= space_name,
-        quantity= quantity,
-        total_amount= total_amount,
-        tax_free_amount= total_amount,
+        quantity= int(quantity),
+        total_amount= int(total_amount),
+        tax_free_amount= int(total_amount),
         approval_url= f"{payment_url}/payments/kakao/approval?order_number={order_number}",
         cancel_url= f"{payment_url}/payments/kakao/cancel?order_number={order_number}",
         fail_url= f"{payment_url}/payments/kakao/fail?order_number={order_number}"
