@@ -13,7 +13,11 @@ from utils.database_config import DatabaseConfig
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 애플리케이션 시작될 때 실행할 코드
-    env_type = '.env.development' if os.getenv('APP_ENV') == 'development' else '.env.production'
+    env_type = (
+        ".env.development"
+        if os.getenv("APP_ENV") == "development"
+        else ".env.production"
+    )
     load_dotenv(env_type)
 
     database = DatabaseConfig().create_database()
@@ -29,9 +33,11 @@ app = FastAPI(lifespan=lifespan, title="결제 API", version="ver.1")
 
 app.include_router(payment_router, prefix="/api/v1/payments")
 
+
 @app.get("/health", status_code=status.HTTP_200_OK)
 async def health_check() -> dict:
-    return {"status" : "ok"}
+    return {"status": "ok"}
+
 
 FastAPIInstrumentor.instrument_app(app)
 
