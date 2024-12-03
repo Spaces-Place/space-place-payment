@@ -66,6 +66,8 @@ async def payment_ready(
     logger.info(f'{order_number}')
 
     logger.info(f'공간 정보 요청: {space_url}')
+    logger.info(f'요청 데이터: {json.dumps(payment_request.model_dump(), ensure_ascii=False)}')
+
     # 공간: 이름, 가격 정보 받아오기(space_id, use_date, start_time, end_time) -> (space_name, unit_price)
     async with httpx.AsyncClient() as client:
         response = await client.post(
