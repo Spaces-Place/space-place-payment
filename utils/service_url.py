@@ -23,13 +23,19 @@ class ServiceUrlConfig:
                 'reservation': os.getenv('RESERVATION_URL'),
                 'payment': os.getenv('PAYMENT_URL'),
                 'space': os.getenv('SPACE_URL'),
+                'member': os.getenv('USER_URL'),
             }
         else:
             self._urls = {
                 'reservation': self._parameter_store.get_parameter('RESERVATION_URL'),
                 'payment': self._parameter_store.get_parameter('PAYMENT_URL'),
                 'space': self._parameter_store.get_parameter('SPACE_URL'),
+                'member': self._parameter_store.get_parameter('USER_URL'),
             }
+
+    @property
+    def member_url(self) -> str:
+        return self._urls.get('member')
 
     @property
     def reservation_url(self) -> str:

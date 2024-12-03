@@ -1,5 +1,6 @@
 
 from contextlib import asynccontextmanager
+import logging
 from typing import AsyncGenerator
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -12,7 +13,7 @@ class MySQLDatabase:
     """
     DB 연결 및 세션 관리
     """
-
+    _logger = logging.getLogger("main")
     _instance = None
     _engine = None
     _session_maker = None
@@ -24,6 +25,8 @@ class MySQLDatabase:
     
     def __init__(self, db_config: DBConfig = None):
         if not hasattr(self, '_db_config'):
+            self._logger.info('데이터 베이스가 초기화 되었습니다.')
+            self._logger.info(db_config)
             self._db_config = db_config
 
     async def initialize(self):
@@ -43,6 +46,7 @@ class MySQLDatabase:
             )
 
             await self.create_tables()  
+            self._logger.info(connection_string)
 
     async def create_tables(self):
         async with self.session() as session:
@@ -52,6 +56,8 @@ class MySQLDatabase:
             for command in sql_commands:
                 if command.strip():
                     await session.execute(text(command.strip()))
+
+            self._logger.info('테이블이 초기화 되었습니다.')
     
     def _build_connection_string(self) -> str:
         host = self._db_config.host
@@ -78,6 +84,7 @@ class MySQLDatabase:
             await self._engine.dispose()
             self._engine = None
             self._session_maker = None
+            self._logger.info('DB 커넥션 해제')
 
 async def get_mysql_session() -> AsyncGenerator[AsyncSession, None]:
     from utils.database_config import DatabaseConfig
