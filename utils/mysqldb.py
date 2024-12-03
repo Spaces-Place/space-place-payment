@@ -13,7 +13,7 @@ class MySQLDatabase:
     """
     DB 연결 및 세션 관리
     """
-    _logger = logging.getLogger("main")
+    _logger = logging.getLogger("")
     _instance = None
     _engine = None
     _session_maker = None
