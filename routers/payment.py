@@ -2,11 +2,12 @@ from datetime import datetime
 import json
 import logging
 from typing import Dict
-from fastapi import APIRouter, Depends, HTTPException, Header, status
+from fastapi import APIRouter, Depends, HTTPException, Header, Request, status
 import httpx
 
 from enums.payment_type import PaymentStatus
 from models.payment import Payment
+from routers.logging_router import LoggingAPIRoute
 from schemas.common import BaseResponse
 from schemas.kakao_pay import KakaoPayApprove, KakaoPayReady
 from schemas.payment import PaymentApproveResponse, KakaoReadyRequest
@@ -19,7 +20,7 @@ from sqlmodel import select
 from utils.service_url import ServiceUrlConfig
 
 
-payment_router = APIRouter(tags=["결제"])
+payment_router = APIRouter(tags=["결제"], route_class=LoggingAPIRoute)
 logger = logging.getLogger()
 
 # 결제 요청
@@ -30,6 +31,7 @@ logger = logging.getLogger()
     summary="결제 준비"
 )
 async def payment_ready(
+    request: Request,
     payment_request: KakaoReadyRequest,
     service_urls: ServiceUrlConfig = Depends(ServiceUrlConfig),
     parameter_store: ParameterStore = Depends(ParameterStore),
@@ -43,6 +45,7 @@ async def payment_ready(
     payment_url = service_urls.payment_url
     space_url = service_urls.space_url
     api_domain = service_urls.api_domain
+    space_domain = f"{request.url.scheme}://{request.url.netloc}"
     kakaopay_url = os.getenv("KAKAOPAY_URL")
     kakao_secret_key = parameter_store.get_parameter("KAKAO_SECRET_KEY", True)
     user_id = token_info["user_id"]
@@ -156,9 +159,9 @@ async def payment_ready(
     quantity= int(quantity),
     total_amount= int(total_amount),
     tax_free_amount= int(total_amount),
-    approval_url= f"{api_domain}/payments/kakao/approval?order_number={order_number}",
-    cancel_url= f"{api_domain}/payments/kakao/cancel?order_number={order_number}",
-    fail_url= f"{api_domain}/payments/kakao/fail?order_number={order_number}"
+    approval_url= f"{space_domain}/booking?order_number={order_number}",
+    cancel_url= f"{space_domain}/booking?order_number={order_number}",
+    fail_url= f"{space_domain}/booking?order_number={order_number}"
     )
 
     logger.info(f'카카오 결제 준비 요청: {kakaopay_url}')
