@@ -42,8 +42,9 @@ class LoggingAPIRoute(APIRoute):
             request_body = await request.body()
             extra["body"] = request_body.decode("UTF-8")
 
-        logger.info(f"요청 URL: {extra['url']}", extra=extra)
-        logger.info(f"요청 Data: {extra.get('body', '')}", extra=extra)
+        logger.info(f"요청 URL: {extra['httpMethod']} {extra['url']}", extra=extra)
+        logger.info(f"쿼리 파라미터: {extra['queryParams']}", extra=extra)
+        logger.info(f"요청 데이터: {extra.get('body', '')}", extra=extra)
 
     @staticmethod
     def _response_log(request: Request, response: Response) -> Dict[str, str]:

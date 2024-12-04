@@ -57,7 +57,6 @@ async def payment_ready(
     """
     회원: 결제자 정보 요청
     """
-    logger.info(f'회원 정보 요청: {user_id}')
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
@@ -71,10 +70,8 @@ async def payment_ready(
             response_data=response.json()
             user_name=response_data.get("name")
 
-            logger.info('회원 조회 완료: {user_name}')
     except:
         logger.error('회원 정보를 가져올 수 없습니다.')
-        logger.error(f"{member_url}/members/{user_id}")
         raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="결제 중 오류가 발생했습니다.",
@@ -86,8 +83,6 @@ async def payment_ready(
     공간: 이름, 가격 정보 받아오기
     (space_id, use_date, start_time, end_time) -> (space_name, unit_price)
     """
-    logger.info(f'공간 정보 요청: {space_url}')
-    logger.info(f'요청 데이터: {json.dumps(payment_request.model_dump(), ensure_ascii=False)}')
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -103,11 +98,8 @@ async def payment_ready(
             space_name=response_data.get("space_name")
             total_amount=response_data.get("total_amount")
             quantity=response_data.get("quantity")
-
-            logger.info(f'공간 조회 완료: {response_data}')
     except:
         logger.error('공간 정보를 가져올 수 없습니다.')
-        logger.error(f"{space_url}/spaces/pre-order")
         raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="결제 중 오류가 발생했습니다.",
@@ -118,13 +110,9 @@ async def payment_ready(
     """
     예약: 예약 번호 요청
     """
-    logger.info(f'예약 번호 요청: {reservation_url}')
     reservation_data = payment_request.model_dump()
     reservation_data["user_name"] = user_name
     reservation_data["space_name"] = space_name
-
-    logger.info(f'공간 정보 요청: {space_url}')
-    logger.info(f'요청 데이터: {reservation_data}')
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -138,11 +126,8 @@ async def payment_ready(
             response.raise_for_status()
             response_data=response.json()
             order_number=response_data.get("order_number")
-
-            logger.info(f'예약 번호 요청 완료: {order_number}')
     except:
         logger.error('예약 번호를 가져올 수 없습니다.')
-        logger.error(f"{reservation_url}/reservations/kakao/ready")
         raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="결제 중 오류가 발생했습니다.",
@@ -159,13 +144,12 @@ async def payment_ready(
     quantity= int(quantity),
     total_amount= int(total_amount),
     tax_free_amount= int(total_amount),
-    approval_url= f"{space_domain}/booking?order_number={order_number}",
-    cancel_url= f"{space_domain}/booking?order_number={order_number}",
-    fail_url= f"{space_domain}/booking?order_number={order_number}"
+    approval_url= f"{space_domain}/booking/success?order_number={order_number}",
+    cancel_url= f"{space_domain}/booking/cancel?order_number={order_number}",
+    fail_url= f"{space_domain}/booking/fail?order_number={order_number}"
     )
 
-    logger.info(f'카카오 결제 준비 요청: {kakaopay_url}')
-    logger.info(f'요청 데이터: {payment_data}')
+    logger.info(f'카카오 결제 준비 요청: {payment_data}')
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -184,40 +168,31 @@ async def payment_ready(
         
     except:
         logger.error('카카오 결제 준비 중 오류가 발생했습니다.')
-        logger.error(f"{kakaopay_url}/online/v1/payment/ready")
         raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="결제 중 오류가 발생했습니다.",
             )
 
     # tid 포함된 결제 정보 저장
-    try:
-        new_payment = Payment(
-            space_id = payment_request.space_id,
-            space_name = space_name,
-            user_id = user_id,
-            user_name = user_name,
-            tid = tid,
-            order_number = order_number, 
-            p_status = PaymentStatus.PENDING,
-            amount=total_amount,
-            payment_date=datetime.now()
-        )
-        logger.info(f"저장 될 결제 정보")
-        logger.info(new_payment)
-        
-        session.add(new_payment)
-        await session.commit()
-        await session.refresh(new_payment)
-        payment_id = new_payment.id
-
-    except Exception as e:
-        logger.warning(f"오류 발생: {e}")
+    new_payment = Payment(
+        space_id = payment_request.space_id,
+        space_name = space_name,
+        user_id = user_id,
+        user_name = user_name,
+        tid = tid,
+        order_number = order_number, 
+        p_status = PaymentStatus.PENDING,
+        amount=total_amount,
+        payment_date=datetime.now()
+    )
+    session.add(new_payment)
+    await session.commit()
+    await session.refresh(new_payment)
+    payment_id = new_payment.id
 
     """
     예약: payment_id 저장
     """
-    logger.info(f'예약 payment_id 저장: {payment_id}')
     try:
         async with httpx.AsyncClient() as client:
             response = await client.patch(
@@ -229,17 +204,14 @@ async def payment_ready(
                 }
             )
             response.raise_for_status()
-            logger.info('예약 payment_id 업데이트 성공')
-    
     except:
         logger.error('예약 서비스에 payment_id를 저장하는 중 오류가 발생했습니다.')
-        logger.error(f"{reservation_url}/reservations/kakao/ready")
         raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="결제 중 오류가 발생했습니다.",
             )
     
-    logger.info(f"예약 및 결제 준비 완료: {user_id}")
+    logger.info(f"예약 및 결제 준비 완료: {user_id}:{order_number}")
     # 사용자에게 결제 화면 보냄
     return {"next_redirect_pc_url": next_redirect_pc_url}
 
@@ -255,11 +227,12 @@ async def payment_ready(
 async def payment_approve(
     order_number: str,
     pg_token: str,
+    request = Request,
     session=Depends(get_mysql_session),
     token_info=Depends(userAuthenticate),
     authorization: str = Header(None)
 ):
-    """구현이 필요하지 않습니다."""
+    print(request.url.path)
     reservation_url = os.getenv("RESERVATION_URL")
     kakaopay_url = os.getenv("KAKAOPAY_URL")
     user_id = token_info["user_id"]
@@ -307,7 +280,6 @@ async def payment_approve(
             logger.info(f'카카오 결제 승인 완료: {approval_result}')
     except:
         logger.error('카카오 결제 승인 요청에 실패했습니다.')
-        logger.error(f"{kakaopay_url}/online/v1/payment/approve")
         raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="결제 중 오류가 발생했습니다.",
@@ -337,7 +309,6 @@ async def payment_approve(
             logger.info(f'예약 상태 COMPLETED 업데이트에 성공했습니다: {order_number}')
     except:
         logger.error(f'예약 상태 업데이트에 실패했습니다.')
-        logger.error(f"{reservation_url}/reservations/kakao/approve")
         raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="결제 중 오류가 발생했습니다.",
