@@ -33,6 +33,7 @@ class ServiceUrlConfig:
                 'payment': self._parameter_store.get_parameter('PAYMENT_URL').strip(),
                 'space': self._parameter_store.get_parameter('SPACE_URL').strip(),
                 'member': self._parameter_store.get_parameter('USER_URL').strip(),
+                'api_domain': self._parameter_store.get_parameter('API_DOMAIN').strip(),
             }
 
     @property
@@ -50,3 +51,7 @@ class ServiceUrlConfig:
     @property
     def space_url(self) -> str:
         return self._urls.get('space')
+    
+    @property
+    def api_domain(self) -> str:
+        return self._urls.get('api_domain')
