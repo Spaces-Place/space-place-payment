@@ -31,7 +31,6 @@ logger = logging.getLogger()
     summary="결제 준비"
 )
 async def payment_ready(
-    request: Request,
     payment_request: KakaoReadyRequest,
     service_urls: ServiceUrlConfig = Depends(ServiceUrlConfig),
     parameter_store: ParameterStore = Depends(ParameterStore),
@@ -227,13 +226,13 @@ async def payment_ready(
 async def payment_approve(
     order_number: str,
     pg_token: str,
-    request = Request,
+    service_urls: ServiceUrlConfig = Depends(ServiceUrlConfig),
     session=Depends(get_mysql_session),
     token_info=Depends(userAuthenticate),
     authorization: str = Header(None)
 ):
-    print(request.url.path)
-    reservation_url = os.getenv("RESERVATION_URL")
+
+    reservation_url = service_urls.reservation_url
     kakaopay_url = os.getenv("KAKAOPAY_URL")
     user_id = token_info["user_id"]
     user_token = authorization.split(" ")[1]
@@ -332,11 +331,12 @@ async def payment_approve(
 async def payment_approve(
     order_number: str,
     session=Depends(get_mysql_session),
+    service_urls: ServiceUrlConfig = Depends(ServiceUrlConfig),
     token_info=Depends(userAuthenticate),
     authorization: str = Header(None)
 ):
     """구현이 필요하지 않습니다."""
-    reservation_url = os.getenv("RESERVATION_URL")
+    reservation_url = service_urls.reservation_url
     user_token = authorization.split(" ")[1]
     user_id = token_info["user_id"]
 
@@ -391,11 +391,12 @@ async def payment_approve(
 async def payment_approve(
     order_number: str,
     session=Depends(get_mysql_session),
+    service_urls: ServiceUrlConfig = Depends(ServiceUrlConfig),
     token_info=Depends(userAuthenticate),
     authorization: str = Header(None)
 ):
     """구현이 필요하지 않습니다."""
-    reservation_url = os.getenv("RESERVATION_URL")
+    reservation_url = service_urls.reservation_url
     user_token = authorization.split(" ")[1]
     user_id = token_info["user_id"]
 
