@@ -26,6 +26,8 @@ class ServiceUrlConfig:
                 'payment': os.getenv('PAYMENT_URL'),
                 'space': os.getenv('SPACE_URL'),
                 'member': os.getenv('USER_URL'),
+                'api_domain': os.getenv('API_DOMAIN'),
+                'space_domain': os.getenv('SPACE_DOMAIN'),
             }
         else:
             self._urls = {
@@ -34,6 +36,7 @@ class ServiceUrlConfig:
                 'space': self._parameter_store.get_parameter('SPACE_URL').strip(),
                 'member': self._parameter_store.get_parameter('USER_URL').strip(),
                 'api_domain': self._parameter_store.get_parameter('API_DOMAIN').strip(),
+                'space_domain': self._parameter_store.get_parameter('SPACE_DOMAIN').strip(),
             }
 
     @property
@@ -55,3 +58,7 @@ class ServiceUrlConfig:
     @property
     def api_domain(self) -> str:
         return self._urls.get('api_domain')
+    
+    @property
+    def space_domain(self) -> str:
+        return self._urls.get('space_domain')

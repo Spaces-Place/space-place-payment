@@ -44,8 +44,8 @@ async def payment_ready(
     reservation_url = service_urls.reservation_url
     payment_url = service_urls.payment_url
     space_url = service_urls.space_url
+    space_domain = service_urls.space_domain
     api_domain = service_urls.api_domain
-    space_domain = f"{request.url.scheme}://{request.url.netloc}"
     kakaopay_url = os.getenv("KAKAOPAY_URL")
     kakao_secret_key = parameter_store.get_parameter("KAKAO_SECRET_KEY", True)
     user_id = token_info["user_id"]
