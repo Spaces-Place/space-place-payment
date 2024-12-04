@@ -30,7 +30,6 @@ class DatabaseConfig:
     def create_database(self) -> MySQLDatabase:
         db_config = self.get_db_config()
         self._logger.info('DB 설정 정보 로드')
-        self._logger.info(db_config)
         return MySQLDatabase(db_config)
 
     def get_db_config(self) -> DBConfig:
