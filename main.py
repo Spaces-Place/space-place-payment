@@ -14,7 +14,7 @@ from utils.database_config import DatabaseConfig
 
 
 log_dir = Path("/var/log/spaceplace/payment")
-log_dir.mkdir(exist_ok=True)
+log_dir.mkdir(parents=True, exist_ok=True)
 
 logging.config.fileConfig('log.conf', encoding="utf-8")
 logger = logging.getLogger()
