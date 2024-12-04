@@ -57,7 +57,7 @@ class MySQLDatabase:
                 if command.strip():
                     await session.execute(text(command.strip()))
 
-            self._logger.info('테이블이 초기화 되었습니다.')
+            self._logger.info('테이블 준비 완료')
     
     def _build_connection_string(self) -> str:
         host = self._db_config.host
