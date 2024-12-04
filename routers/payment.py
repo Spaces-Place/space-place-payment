@@ -227,11 +227,12 @@ async def payment_approve(
     order_number: str,
     pg_token: str,
     service_urls: ServiceUrlConfig = Depends(ServiceUrlConfig),
+    parameter_store: ParameterStore = Depends(ParameterStore),
     session=Depends(get_mysql_session),
     token_info=Depends(userAuthenticate),
     authorization: str = Header(None)
 ):
-
+    kakao_secret_key = parameter_store.get_parameter("KAKAO_SECRET_KEY", True)
     reservation_url = service_urls.reservation_url
     kakaopay_url = os.getenv("KAKAOPAY_URL")
     user_id = token_info["user_id"]
@@ -267,7 +268,7 @@ async def payment_approve(
                 f"{kakaopay_url}/online/v1/payment/approve",
                 data=approve_data.model_dump_json(),
                 headers={
-                    "Authorization": f"SECRET_KEY {os.getenv("KAKAO_SECRET_KEY")}",
+                    "Authorization": f"SECRET_KEY {kakao_secret_key}",
                     "Content-Type": "application/json"
                 }
             )
