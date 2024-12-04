@@ -2,7 +2,7 @@ from datetime import datetime
 import json
 import logging
 from typing import Dict
-from fastapi import APIRouter, Depends, HTTPException, Header, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request, status
 import httpx
 
 from enums.payment_type import PaymentStatus
@@ -445,10 +445,12 @@ async def payment_approve(
     summary="결제 내역 확인"
 )
 async def get_reservations(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=10, ge=1, le=100),
     session=Depends(get_mysql_session),
     token_info=Depends(userAuthenticate)
 ):
-    statement = select(Payment).where(Payment.user_id == token_info["user_id"])
+    statement = select(Payment).where(Payment.user_id == token_info["user_id"]).offset(skip).limit(limit)
     result = await session.execute(statement)
     reservations = result.scalars().all()
 
