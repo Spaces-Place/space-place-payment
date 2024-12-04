@@ -188,26 +188,28 @@ async def payment_ready(
             )
 
     # tid 포함된 결제 정보 저장
-    new_payment = Payment(
-        space_id = payment_request.space_id,
-        space_name = space_name,
-        user_id = user_id,
-        user_name = user_name,
-        tid = tid,
-        order_number = order_number, 
-        p_status = PaymentStatus.PENDING,
-        amount=total_amount,
-        payment_date=datetime.now()
-    )
-    logger.info(f"저장 될 결제 정보")
-    logger.info(new_payment)
-    
-    session.add(new_payment)
-    await session.commit()
-    await session.refresh(new_payment)
-    payment_id = new_payment.id
+    try:
+        new_payment = Payment(
+            space_id = payment_request.space_id,
+            space_name = space_name,
+            user_id = user_id,
+            user_name = user_name,
+            tid = tid,
+            order_number = order_number, 
+            p_status = PaymentStatus.PENDING,
+            amount=total_amount,
+            payment_date=datetime.now()
+        )
+        logger.info(f"저장 될 결제 정보")
+        logger.info(new_payment)
+        
+        session.add(new_payment)
+        await session.commit()
+        await session.refresh(new_payment)
+        payment_id = new_payment.id
 
-
+    except Exception as e:
+        logger.warning(f"오류 발생: {e}")
 
     """
     예약: payment_id 저장
