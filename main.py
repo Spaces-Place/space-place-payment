@@ -13,7 +13,7 @@ from routers.payment import payment_router
 from utils.database_config import DatabaseConfig
 
 
-log_dir = Path("/var/log/spaceplace")
+log_dir = Path("/var/log/spaceplace/payment")
 log_dir.mkdir(exist_ok=True)
 
 logging.config.fileConfig('log.conf', encoding="utf-8")
