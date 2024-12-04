@@ -199,6 +199,9 @@ async def payment_ready(
         amount=total_amount,
         payment_date=datetime.now()
     )
+    logger.log(f"저장 될 결제 정보")
+    logger.log(new_payment)
+    
     session.add(new_payment)
     await session.commit()
     await session.refresh(new_payment)
