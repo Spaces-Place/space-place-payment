@@ -42,6 +42,7 @@ async def payment_ready(
     reservation_url = service_urls.reservation_url
     payment_url = service_urls.payment_url
     space_url = service_urls.space_url
+    api_domain = service_urls.api_domain
     kakaopay_url = os.getenv("KAKAOPAY_URL")
     kakao_secret_key = parameter_store.get_parameter("KAKAO_SECRET_KEY", True)
     user_id = token_info["user_id"]
@@ -155,9 +156,9 @@ async def payment_ready(
     quantity= int(quantity),
     total_amount= int(total_amount),
     tax_free_amount= int(total_amount),
-    approval_url= f"{payment_url}/payments/kakao/approval?order_number={order_number}",
-    cancel_url= f"{payment_url}/payments/kakao/cancel?order_number={order_number}",
-    fail_url= f"{payment_url}/payments/kakao/fail?order_number={order_number}"
+    approval_url= f"{api_domain}/payments/kakao/approval?order_number={order_number}",
+    cancel_url= f"{api_domain}/payments/kakao/cancel?order_number={order_number}",
+    fail_url= f"{api_domain}/payments/kakao/fail?order_number={order_number}"
     )
 
     logger.info(f'카카오 결제 준비 요청: {kakaopay_url}')
