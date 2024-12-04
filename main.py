@@ -15,7 +15,6 @@ from utils.database_config import DatabaseConfig
 
 log_dir = Path("/var/log/spaceplace/payment")
 log_dir.mkdir(parents=True, exist_ok=True)
-
 logging.config.fileConfig('log.conf', encoding="utf-8")
 logger = logging.getLogger()
 
@@ -43,11 +42,6 @@ async def health_check() -> dict:
     logger.info('health check')
     return {"status" : "ok"}
 
-FastAPIInstrumentor.instrument_app(app)
-
-instrumentator = Instrumentator()
-instrumentator.instrument(app).expose(app)
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # 허용하는 URL 넣어야함
@@ -55,6 +49,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+FastAPIInstrumentor.instrument_app(app)
+
+instrumentator = Instrumentator()
+instrumentator.instrument(app).expose(app)
+
 
 if __name__ == "__main__":
     import uvicorn

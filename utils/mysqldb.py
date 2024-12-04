@@ -25,8 +25,7 @@ class MySQLDatabase:
     
     def __init__(self, db_config: DBConfig = None):
         if not hasattr(self, '_db_config'):
-            self._logger.info('데이터 베이스가 초기화 되었습니다.')
-            self._logger.info(db_config)
+            self._logger.info('데이터 베이스가 연동 되었습니다.')
             self._db_config = db_config
 
     async def initialize(self):
@@ -46,7 +45,6 @@ class MySQLDatabase:
             )
 
             await self.create_tables()  
-            self._logger.info(connection_string)
 
     async def create_tables(self):
         async with self.session() as session:
