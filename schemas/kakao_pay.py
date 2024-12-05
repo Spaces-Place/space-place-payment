@@ -13,6 +13,7 @@ class KakaoPayReady(BaseModel):
     cancel_url: str
     fail_url: str
 
+
 class KakaoPayApprove(BaseModel):
     cid: str
     tid: str
