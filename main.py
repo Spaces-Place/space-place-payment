@@ -1,22 +1,16 @@
 from contextlib import asynccontextmanager
-import logging
 import logging.config
 import os
-from pathlib import Path
 from dotenv import load_dotenv
-from fastapi import FastAPI, status
+from fastapi import Depends, FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from routers.payment import payment_router
 from utils.database_config import DatabaseConfig
+from utils.logger import Logger
 
-
-log_dir = Path("/var/log/spaceplace/payment")
-log_dir.mkdir(parents=True, exist_ok=True)
-logging.config.fileConfig('log.conf', encoding="utf-8")
-logger = logging.getLogger()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -38,7 +32,7 @@ app = FastAPI(lifespan=lifespan, title="결제 API", version="ver.1")
 app.include_router(payment_router, prefix="/api/v1/payments")
 
 @app.get("/health", status_code=status.HTTP_200_OK)
-async def health_check() -> dict:
+async def health_check(logger: Logger = Depends(Logger.setup_logger)) -> dict:
     logger.info('health check')
     return {"status" : "ok"}
 
