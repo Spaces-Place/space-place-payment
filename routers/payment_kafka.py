@@ -22,18 +22,17 @@ from utils.service_url import ServiceUrlConfig
 from schemas.kakao_pay import KakaoPayFail
 
 
-payment_router = APIRouter(tags=["결제"], route_class=LoggingAPIRoute)
+payment_kafka_router = APIRouter(tags=["결제"], route_class=LoggingAPIRoute)
 logger = logging.getLogger()
 
 # 결제 요청
-@payment_router.post(
+@payment_kafka_router.post(
     "/kakao",
     response_model=Dict,
     status_code=status.HTTP_200_OK,
     summary="결제 준비"
 )
 async def payment_ready(
-    request: Request,
     payment_request: KakaoReadyRequest,
     service_urls: ServiceUrlConfig = Depends(ServiceUrlConfig),
     parameter_store: ParameterStore = Depends(ParameterStore),
@@ -201,18 +200,15 @@ async def payment_ready(
     예약: payment_id 저장
     """
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.patch(
-                f"{reservation_url}/reservations/kakao/ready",
-                json={"payment_id": payment_id, "order_number": order_number},
-                headers={
-                    "Authorization": f"Bearer {user_token}",
-                    "Content-Type": "application/json"
-                }
-            )
-            response.raise_for_status()
-    except:
-        logger.error('예약 서비스에 payment_id를 저장하는 중 오류가 발생했습니다.')
+        # 객체를 그냥 보내게 되면 '키':'값'으로 가게 되는 문제 발생 
+        # '키'는 json 타입으로 인식하지 못해 "키"로 갈 수 있게 json string으로 먼저 변환함.
+        ready_approval_data = {
+            "payment_id": payment_id,
+            "order_number": order_number
+        }
+        await payment_service.ready_approval(json.dumps(ready_approval_data))
+    except Exception as e:
+        logger.error(f"예약 서비스 payment_id 업데이트 토픽 발행 중 오류 발생.{e}")
         raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="결제 중 오류가 발생했습니다.",
@@ -225,7 +221,7 @@ async def payment_ready(
 
 
 # 결제 승인
-@payment_router.get(
+@payment_kafka_router.get(
     "/kakao/approval",
     response_model=PaymentApproveResponse,
     status_code=status.HTTP_200_OK,
@@ -234,13 +230,15 @@ async def payment_ready(
 async def payment_approve(
     order_number: str,
     pg_token: str,
-    request = Request,
+    payment_service: PaymentService = Depends(get_payment_service),
+    service_urls: ServiceUrlConfig = Depends(ServiceUrlConfig),
+    parameter_store: ParameterStore = Depends(ParameterStore),
     session=Depends(get_mysql_session),
     token_info=Depends(userAuthenticate),
     authorization: str = Header(None)
 ):
-    print(request.url.path)
-    reservation_url = os.getenv("RESERVATION_URL")
+    kakao_secret_key = parameter_store.get_parameter("KAKAO_SECRET_KEY", True)
+    reservation_url = service_urls.reservation_url
     kakaopay_url = os.getenv("KAKAOPAY_URL")
     user_id = token_info["user_id"]
     # user_id = "test_consumer"
@@ -276,7 +274,7 @@ async def payment_approve(
                 f"{kakaopay_url}/online/v1/payment/approve",
                 data=approve_data.model_dump_json(),
                 headers={
-                    "Authorization": f"SECRET_KEY {os.getenv("KAKAO_SECRET_KEY")}",
+                    "Authorization": f"SECRET_KEY {kakao_secret_key}",
                     "Content-Type": "application/json"
                 }
             )
@@ -294,34 +292,9 @@ async def payment_approve(
             )
     
     # 여기까지 결제 승인된 상태
-    payment.payment_method = payment_method_type
-    payment.amount = amount
-    payment.p_status = PaymentStatus.COMPLETED
+    payment_approval_data = {"order_number": order_number}
+    await payment_service.payment_approval(json.dumps(payment_approval_data))
 
-    logger.info(f'결제 정보를 저장합니다.{payment}')
-    await session.commit()
-
-    # 예약: 예약 상태 업데이트
-    logger.info(f'예약 상태 업데이트: {reservation_url}')
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.patch(
-                f"{reservation_url}/reservations/kakao/approve",
-                json={"order_number": order_number},
-                headers={
-                    "Authorization": f"Bearer {user_token}",
-                    "Content-Type": "application/json"
-                }
-            )
-            response.raise_for_status()
-            logger.info(f'예약 상태 COMPLETED 업데이트에 성공했습니다: {order_number}')
-    except:
-        logger.error(f'예약 상태 업데이트에 실패했습니다.')
-        raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="결제 중 오류가 발생했습니다.",
-            )
-    
     logger.info(f"예약 및 결제 승인 성공: {user_id}")
 
     return PaymentApproveResponse(
@@ -331,7 +304,7 @@ async def payment_approve(
 
 
 # 결제 실패
-@payment_router.post(
+@payment_kafka_router.post(
     "/kakao/fail",
     response_model=BaseResponse,
     status_code=status.HTTP_200_OK,
@@ -339,12 +312,14 @@ async def payment_approve(
 )
 async def payment_fail(
     fail_data: KakaoPayFail,
+    payment_service: PaymentService = Depends(get_payment_service),
     session=Depends(get_mysql_session),
+    service_urls: ServiceUrlConfig = Depends(ServiceUrlConfig),
     token_info=Depends(userAuthenticate),
     authorization: str = Header(None)
 ):
     """구현이 필요하지 않습니다."""
-    reservation_url = os.getenv("RESERVATION_URL")
+    reservation_url = service_urls.reservation_url
     user_token = authorization.split(" ")[1]
     user_id = token_info["user_id"]
 
@@ -363,33 +338,14 @@ async def payment_fail(
     payment.p_status = PaymentStatus.FAILED
     await session.commit()
 
-    # 예약: 예약 상태 업데이트
-    logger.info(f'예약 상태 FAIL 업데이트: {reservation_url}')
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.patch(
-                f"{reservation_url}/reservations/kakao/fail",
-                json={"order_number": fail_data.order_number},
-                headers={
-                    "Authorization": f"Bearer {user_token}",
-                    "Content-Type": "application/json"
-                }
-            )
-            response.raise_for_status()
-            logger.info(f'예약 상태 FAIL 업데이트 성공: {fail_data.order_number}')
-    except:
-        logger.error(f'예약 상태 FAIL 업데이트 실패')
-        logger.error(f"{reservation_url}/reservations/kakao/approve")
-        raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="결제 중 오류가 발생했습니다.",
-            )
+    # 결제 실패
+    await payment_service.ready_fail(json.dumps({"order_number": fail_data.order_number}))
 
     return BaseResponse(message="예약 및 결제가 실패했습니다.")
 
 
 # 결제 취소
-@payment_router.post(
+@payment_kafka_router.post(
     "/kakao/cancel",
     response_model=BaseResponse,
     status_code=status.HTTP_200_OK,
@@ -398,11 +354,12 @@ async def payment_fail(
 async def payment_approve(
     order_number: str,
     session=Depends(get_mysql_session),
+    service_urls: ServiceUrlConfig = Depends(ServiceUrlConfig),
     token_info=Depends(userAuthenticate),
     authorization: str = Header(None)
 ):
     """구현이 필요하지 않습니다."""
-    reservation_url = os.getenv("RESERVATION_URL")
+    reservation_url = service_urls.reservation_url
     user_token = authorization.split(" ")[1]
     user_id = token_info["user_id"]
 
@@ -445,7 +402,7 @@ async def payment_approve(
 
     return BaseResponse(message="예약 및 결제가 취소되었습니다.")
 
-@payment_router.get(
+@payment_kafka_router.get(
     "",
     response_model=Dict,
     status_code=status.HTTP_200_OK,
