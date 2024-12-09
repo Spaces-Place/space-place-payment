@@ -4,6 +4,7 @@ from datetime import datetime
 
 class Logger:
     logger = None
+    _log_level = "INFO"
 
     @staticmethod
     def setup_logger():
@@ -27,12 +28,12 @@ class Logger:
                 'handlers': {
                     'console': {
                         'class': 'logging.StreamHandler',
-                        'level': 'INFO',
+                        'level': Logger._log_level,
                         'formatter': 'detailed'
                     },
                     'file': {
                         'class': 'logging.handlers.RotatingFileHandler',
-                        'level': 'INFO',
+                        'level': Logger._log_level,
                         'formatter': 'detailed',
                         'filename': str(daily_log_dir / 'logfile.log'),
                         'maxBytes': 1024 * 1024,  # 1mb
@@ -41,7 +42,7 @@ class Logger:
                     }
                 },
                 'root': {
-                    'level': 'INFO',
+                    'level': Logger._log_level,
                     'handlers': ['console', 'file']
                 }
             }

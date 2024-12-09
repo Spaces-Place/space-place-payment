@@ -7,7 +7,6 @@ import httpx
 
 from enums.payment_type import PaymentStatus
 from models.payment import Payment
-from routers.logging_router import LoggingAPIRoute
 from schemas.common import BaseResponse
 from schemas.kakao_pay import KakaoPayApprove, KakaoPayReady
 from schemas.payment import PaymentApproveResponse, KakaoReadyRequest
@@ -21,7 +20,7 @@ from utils.service_url import ServiceUrlConfig
 from schemas.kakao_pay import KakaoPayFail
 
 
-payment_router = APIRouter(tags=["결제"], route_class=LoggingAPIRoute)
+payment_router = APIRouter(tags=["결제"])
 logger = logging.getLogger()
 
 # 결제 요청
