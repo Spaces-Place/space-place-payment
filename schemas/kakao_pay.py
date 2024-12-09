@@ -19,3 +19,6 @@ class KakaoPayApprove(BaseModel):
     partner_order_id: str
     partner_user_id: str
     pg_token: str
+
+class KakaoPayFail(BaseModel):
+    order_number: str
