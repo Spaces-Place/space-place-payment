@@ -50,10 +50,10 @@ class KafkaConfig:
             tp = MSKTokenProvider()
             return Producer({
                 'bootstrap.servers': self.bootstrap_servers,
-                'security_protocol':'SASL_SSL',
-                'sasl_mechanism':'OAUTHBEARER',
-                'sasl_oauth_token_provider' : tp,
-                'client_id' : socket.gethostname(),
+                'security.protocol': 'SASL_SSL',
+                'sasl.mechanism': 'OAUTHBEARER',
+                'sasl.oauth.token.provider': tp,
+                'client.id': socket.gethostname(),
             })
 
         
