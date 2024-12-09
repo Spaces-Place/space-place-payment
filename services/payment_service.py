@@ -45,7 +45,6 @@ class PaymentService:
 
     # pub: 결제 실패
     async def ready_fail(self, data: str):
-        print(data)
         await self.kafka_config.produce_message(self._ready_fail_topic, data)
 
     # pub: 결제 성공
@@ -54,6 +53,8 @@ class PaymentService:
 
     # sub: 결제 성공 처리
     async def start_payment_approval(self, message: str):
+        self._logger.info("테스트 성공")
+        self._logger.info(message)
         try:
             data = json.loads(message)
 

@@ -14,7 +14,7 @@ from opentelemetry.semconv.resource import ResourceAttributes
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
 from routers.payment_kafka import payment_kafka_router
-from services.payment_service import PaymentService
+from services.payment_service import PaymentService, get_payment_service
 from utils.database_config import DatabaseConfig
 from utils.kafka_config import get_kafka
 from utils.logger import Logger
@@ -65,6 +65,14 @@ app = FastAPI(lifespan=lifespan, title="결제 API", version="ver.1")
 app.add_middleware(LoggingMiddleware)
 
 app.include_router(payment_kafka_router, prefix="/api/v1/payments")
+
+
+@app.get("/test/{topic}", status_code=status.HTTP_200_OK)
+async def topic_test(topic:str, payment_service: PaymentService = Depends(get_payment_service), logger: Logger = Depends(Logger.setup_logger)) -> dict:
+    logger.info(f"토픽:{topic}")
+    payment_service.kafka_config.produce_message(topic, "성공성공성공")
+    return {"topic" : topic}
+
 
 @app.get("/health", status_code=status.HTTP_200_OK)
 async def health_check(logger: Logger = Depends(Logger.setup_logger)) -> dict:
