@@ -17,5 +17,5 @@ class MSKTokenProvider():
         if self._env_config.is_development:
             token, _ = MSKAuthTokenProvider.generate_auth_token(os.getenv('REGION_NAME', 'ap-northeast-2'))
         else:
-            token, _ = MSKAuthTokenProvider.generate_auth_token(os.getenv('REGION_NAME', 'ap-northeast-2'), self._parameter_store.get_parameter("KAFKA_ROLE_ARN"))
+            token, _ = MSKAuthTokenProvider.generate_auth_token_from_role_arn(os.getenv('REGION_NAME', 'ap-northeast-2'), self._parameter_store.get_parameter("KAFKA_ROLE_ARN"))
         return token
