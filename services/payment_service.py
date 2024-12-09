@@ -10,8 +10,8 @@ from utils.logger import Logger
 
 
 class PaymentService:
-    
-    def __init__(self, kafka_config: KafkaConfig , logger: Logger):
+
+    def __init__(self, kafka_config: KafkaConfig, logger: Logger):
         self.kafka_config = kafka_config
         self._logger = logger
         self._ready_approval_topic = "reservation.ready.approval"
@@ -21,9 +21,7 @@ class PaymentService:
         self.topic_handlers = {
             self._payment_approval_topic: self.start_payment_approval
         }
-        self.consumer_groups = {
-            self._payment_approval_topic: "payment_group"
-        }
+        self.consumer_groups = {self._payment_approval_topic: "payment_group"}
 
     async def initialize_consumers(self):
         # 토픽별 컨슈머 초기화
@@ -31,11 +29,11 @@ class PaymentService:
             self.kafka_config.start_consumer(
                 topic=topic,
                 group_id=group_id,
-                message_handler=self.topic_handlers[topic]
+                message_handler=self.topic_handlers[topic],
             )
 
         self._logger.info(f"컨슈머 초기화 토픽: {topic}, 그룹: {group_id}")
-        
+
         # 메세지 소비 시작
         await self.kafka_config.start_consuming()
 
@@ -59,7 +57,9 @@ class PaymentService:
             data = json.loads(message)
 
             async for session in get_mysql_session():
-                statement = select(Payment).filter(Payment.order_number == data.get("order_number"))
+                statement = select(Payment).filter(
+                    Payment.order_number == data.get("order_number")
+                )
                 result = await session.execute(statement)
                 payment = result.scalars().first()
 
@@ -75,5 +75,9 @@ class PaymentService:
         except Exception as e:
             self._logger.error(f"결제 정보 업데이트 중 오류가 발생했습니다: {e}")
 
-async def get_payment_service(kafka_config: KafkaConfig = Depends(get_kafka), logger: Logger = Depends(Logger.setup_logger)):
+
+async def get_payment_service(
+    kafka_config: KafkaConfig = Depends(get_kafka),
+    logger: Logger = Depends(Logger.setup_logger),
+):
     return PaymentService(kafka_config, logger)
