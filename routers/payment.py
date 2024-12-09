@@ -11,7 +11,6 @@ from routers.logging_router import LoggingAPIRoute
 from schemas.common import BaseResponse
 from schemas.kakao_pay import KakaoPayApprove, KakaoPayReady
 from schemas.payment import PaymentApproveResponse, KakaoReadyRequest
-from services.payment_service import PaymentService, get_payment_service
 from utils.authenticate import userAuthenticate
 from utils.aws_ssm import ParameterStore
 from utils.mysqldb import get_mysql_session
@@ -33,13 +32,11 @@ logger = logging.getLogger()
     summary="결제 준비"
 )
 async def payment_ready(
-    request: Request,
     payment_request: KakaoReadyRequest,
     service_urls: ServiceUrlConfig = Depends(ServiceUrlConfig),
     parameter_store: ParameterStore = Depends(ParameterStore),
     session=Depends(get_mysql_session),
     token_info=Depends(userAuthenticate),
-    payment_service: PaymentService = Depends(get_payment_service),
     authorization: str = Header(None)
 ):
     """구현이 필요하지 않습니다."""
@@ -147,7 +144,6 @@ async def payment_ready(
     quantity= int(quantity),
     total_amount= int(total_amount),
     tax_free_amount= int(total_amount),
-    # TODO
     approval_url= f"{space_domain}/booking/success?order_number={order_number}",
     cancel_url= f"{space_domain}/booking/cancel?order_number={order_number}",
     fail_url= f"{space_domain}/booking/fail?order_number={order_number}"
@@ -234,12 +230,10 @@ async def payment_ready(
 async def payment_approve(
     order_number: str,
     pg_token: str,
-    request = Request,
     session=Depends(get_mysql_session),
     token_info=Depends(userAuthenticate),
     authorization: str = Header(None)
 ):
-    print(request.url.path)
     reservation_url = os.getenv("RESERVATION_URL")
     kakaopay_url = os.getenv("KAKAOPAY_URL")
     user_id = token_info["user_id"]

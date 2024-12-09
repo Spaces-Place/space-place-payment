@@ -1,5 +1,4 @@
 import asyncio
-from random import randint
 from contextlib import asynccontextmanager
 import os
 from dotenv import load_dotenv
@@ -7,6 +6,12 @@ from fastapi import Depends, FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from prometheus_fastapi_instrumentator import Instrumentator
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.semconv.resource import ResourceAttributes
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
 from routers.payment_kafka import payment_kafka_router
 from services.payment_service import PaymentService
@@ -49,17 +54,10 @@ app.include_router(payment_kafka_router, prefix="/api/v1/payments")
 
 @app.get("/health", status_code=status.HTTP_200_OK)
 async def health_check(logger: Logger = Depends(Logger.setup_logger)) -> dict:
-    logger.info('health check')
-    return {"status" : "ok"}
-
-# @app.get("/rolldice")
-# async def roll_dice(player: str = None, logger: Logger = Depends(Logger.setup_logger)):
-#     result = str(randint(1, 6))
-#     if player:
-#         logger.warning("%s is rolling the dice: %s", player, result)
-#     else:
-#         logger.warning("Anonymous player is rolling the dice: %s", result)
-#     return {"result": result}
+    with trace.get_tracer(__name__).start_as_current_span("health check") as span:
+        span.set_attribute("item_id", "123")
+        logger.info('health check')
+        return {"status" : "ok"}
 
 app.add_middleware(
     CORSMiddleware,
@@ -69,10 +67,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-FastAPIInstrumentor.instrument_app(app)
+"""Trace"""
+# OpenTelemetry
+resource = Resource.create({ResourceAttributes.SERVICE_NAME: "payment-service"})
+trace_provider = TracerProvider(resource=resource)
 
+# 템포에 데이터 전송을 위한 OLTP span Exporter
+tempo_exporter = OTLPSpanExporter(endpoint="http://localhost:4318/v1/traces")
+span_processor = BatchSpanProcessor(tempo_exporter)
+trace_provider.add_span_processor(span_processor) # Span 프로세서 추가
+
+trace.set_tracer_provider(trace_provider)
+
+FastAPIInstrumentor.instrument_app(app, excluded_urls="client/.*/health")
 instrumentator = Instrumentator()
-instrumentator.instrument(app).expose(app)
+instrumentator.instrument(app).expose(app) # 메트릭(/metrics) 노출
 
 
 if __name__ == "__main__":

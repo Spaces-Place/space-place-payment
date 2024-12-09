@@ -1,6 +1,5 @@
 from datetime import datetime
 import json
-import logging
 from typing import Dict
 from fastapi import APIRouter, Depends, HTTPException, Header, Query, status
 import httpx
@@ -14,6 +13,7 @@ from schemas.payment import PaymentApproveResponse, KakaoReadyRequest
 from services.payment_service import PaymentService, get_payment_service
 from utils.authenticate import userAuthenticate
 from utils.aws_ssm import ParameterStore
+from utils.logger import Logger
 from utils.mysqldb import get_mysql_session
 import os
 from sqlmodel import select
@@ -23,7 +23,6 @@ from schemas.kakao_pay import KakaoPayFail
 
 
 payment_kafka_router = APIRouter(tags=["결제"], route_class=LoggingAPIRoute)
-logger = logging.getLogger()
 
 # 결제 요청
 @payment_kafka_router.post(
@@ -38,6 +37,7 @@ async def payment_ready(
     parameter_store: ParameterStore = Depends(ParameterStore),
     session=Depends(get_mysql_session),
     token_info=Depends(userAuthenticate),
+    logger: Logger = Depends(Logger.setup_logger),
     payment_service: PaymentService = Depends(get_payment_service),
     authorization: str = Header(None)
 ):
@@ -146,7 +146,6 @@ async def payment_ready(
     quantity= int(quantity),
     total_amount= int(total_amount),
     tax_free_amount= int(total_amount),
-    # TODO
     approval_url= f"{space_domain}/booking/success?order_number={order_number}",
     cancel_url= f"{space_domain}/booking/cancel?order_number={order_number}",
     fail_url= f"{space_domain}/booking/fail?order_number={order_number}"
@@ -235,6 +234,7 @@ async def payment_approve(
     parameter_store: ParameterStore = Depends(ParameterStore),
     session=Depends(get_mysql_session),
     token_info=Depends(userAuthenticate),
+    logger: Logger = Depends(Logger.setup_logger),
     authorization: str = Header(None)
 ):
     kakao_secret_key = parameter_store.get_parameter("KAKAO_SECRET_KEY", True)
@@ -316,6 +316,7 @@ async def payment_fail(
     session=Depends(get_mysql_session),
     service_urls: ServiceUrlConfig = Depends(ServiceUrlConfig),
     token_info=Depends(userAuthenticate),
+    logger: Logger = Depends(Logger.setup_logger),
     authorization: str = Header(None)
 ):
     """구현이 필요하지 않습니다."""
@@ -356,6 +357,7 @@ async def payment_approve(
     session=Depends(get_mysql_session),
     service_urls: ServiceUrlConfig = Depends(ServiceUrlConfig),
     token_info=Depends(userAuthenticate),
+    logger: Logger = Depends(Logger.setup_logger),
     authorization: str = Header(None)
 ):
     """구현이 필요하지 않습니다."""
@@ -412,7 +414,8 @@ async def get_reservations(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=10, ge=1, le=100),
     session=Depends(get_mysql_session),
-    token_info=Depends(userAuthenticate)
+    token_info=Depends(userAuthenticate),
+    logger: Logger = Depends(Logger.setup_logger)
 ):
     statement = select(Payment).where(Payment.user_id == token_info["user_id"]).offset(skip).limit(limit)
     result = await session.execute(statement)
