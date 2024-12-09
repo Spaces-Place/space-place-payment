@@ -31,7 +31,7 @@ async def start_payment_consumers():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """애플리케이션 시작될 때 실행할 코드"""
-    
+
     """Trace"""
     # OpenTelemetry
     resource = Resource.create({ResourceAttributes.SERVICE_NAME: "payment-service"})
@@ -40,11 +40,15 @@ async def lifespan(app: FastAPI):
     # 템포에 데이터 전송을 위한 OLTP span Exporter
     tempo_exporter = OTLPSpanExporter(endpoint="http://localhost:4318")
     span_processor = BatchSpanProcessor(tempo_exporter)
-    trace_provider.add_span_processor(span_processor) # Span 프로세서 추가
+    trace_provider.add_span_processor(span_processor)  # Span 프로세서 추가
     trace.set_tracer_provider(trace_provider)
 
     # 환경 설정
-    env_type = '.env.development' if os.getenv('APP_ENV') == 'development' else '.env.production'
+    env_type = (
+        ".env.development"
+        if os.getenv("APP_ENV") == "development"
+        else ".env.production"
+    )
     load_dotenv(env_type)
 
     # DB 설정
@@ -54,7 +58,7 @@ async def lifespan(app: FastAPI):
     consumer_task = asyncio.create_task(start_payment_consumers())
 
     yield
-    
+
     """애플리케이션 종료될 때 실행할 코드 (필요 시 추가)"""
     consumer_task.cancel()
     await asyncio.gather(consumer_task, return_exceptions=True)
@@ -68,10 +72,14 @@ app.include_router(payment_kafka_router, prefix="/api/v1/payments")
 
 
 @app.get("/test/{topic}", status_code=status.HTTP_200_OK)
-async def topic_test(topic:str, payment_service: PaymentService = Depends(get_payment_service), logger: Logger = Depends(Logger.setup_logger)) -> dict:
+async def topic_test(
+    topic: str,
+    payment_service: PaymentService = Depends(get_payment_service),
+    logger: Logger = Depends(Logger.setup_logger),
+) -> dict:
     logger.info(f"토픽:{topic}")
     payment_service.kafka_config.produce_message(topic, "성공성공성공")
-    return {"topic" : topic}
+    return {"topic": topic}
 
 
 @app.get("/health", status_code=status.HTTP_200_OK)
@@ -79,8 +87,9 @@ async def health_check(logger: Logger = Depends(Logger.setup_logger)) -> dict:
     tracer = trace.get_tracer(__name__)
     with tracer.start_as_current_span("health check") as span:
         span.set_attribute("item_id", "123")
-        logger.info('health check')
-        return {"status" : "ok"}
+        logger.info("health check")
+        return {"status": "ok"}
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -93,7 +102,7 @@ app.add_middleware(
 # FastAPIInstrumentor.instrument_app(app, excluded_urls="client/.*/health")
 FastAPIInstrumentor.instrument_app(app)
 instrumentator = Instrumentator()
-instrumentator.instrument(app).expose(app) # 메트릭(/metrics) 노출
+instrumentator.instrument(app).expose(app)  # 메트릭(/metrics) 노출
 
 
 if __name__ == "__main__":
