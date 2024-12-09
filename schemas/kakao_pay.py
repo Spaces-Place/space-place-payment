@@ -13,12 +13,14 @@ class KakaoPayReady(BaseModel):
     cancel_url: str
     fail_url: str
 
+
 class KakaoPayApprove(BaseModel):
     cid: str
     tid: str
     partner_order_id: str
     partner_user_id: str
     pg_token: str
+
 
 class KakaoPayFail(BaseModel):
     order_number: str
