@@ -6,18 +6,19 @@ from fastapi import Depends, FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from prometheus_fastapi_instrumentator import Instrumentator
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.sdk.resources import Resource
-from opentelemetry.semconv.resource import ResourceAttributes
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+# from opentelemetry import trace
+# from opentelemetry.sdk.trace import TracerProvider
+# from opentelemetry.sdk.trace.export import BatchSpanProcessor
+# from opentelemetry.sdk.resources import Resource
+# from opentelemetry.semconv.resource import ResourceAttributes
+# from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
 from routers.payment_kafka import payment_kafka_router
 from services.payment_service import PaymentService
 from utils.database_config import DatabaseConfig
 from utils.kafka_config import get_kafka
 from utils.logger import Logger
+from utils.logging_middleware import LoggingMiddleware
 
 
 async def start_payment_consumers():
@@ -49,15 +50,16 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan, title="결제 API", version="ver.1")
+app.add_middleware(LoggingMiddleware)
 
 app.include_router(payment_kafka_router, prefix="/api/v1/payments")
 
 @app.get("/health", status_code=status.HTTP_200_OK)
 async def health_check(logger: Logger = Depends(Logger.setup_logger)) -> dict:
-    with trace.get_tracer(__name__).start_as_current_span("health check") as span:
-        span.set_attribute("item_id", "123")
-        logger.info('health check')
-        return {"status" : "ok"}
+    # with trace.get_tracer(__name__).start_as_current_span("health check") as span:
+    #     span.set_attribute("item_id", "123")
+    logger.info('health check')
+    return {"status" : "ok"}
 
 app.add_middleware(
     CORSMiddleware,
@@ -67,17 +69,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-"""Trace"""
-# OpenTelemetry
-resource = Resource.create({ResourceAttributes.SERVICE_NAME: "payment-service"})
-trace_provider = TracerProvider(resource=resource)
+# """Trace"""
+# # OpenTelemetry
+# resource = Resource.create({ResourceAttributes.SERVICE_NAME: "payment-service"})
+# trace_provider = TracerProvider(resource=resource)
 
-# 템포에 데이터 전송을 위한 OLTP span Exporter
-tempo_exporter = OTLPSpanExporter(endpoint="http://localhost:4318/v1/traces")
-span_processor = BatchSpanProcessor(tempo_exporter)
-trace_provider.add_span_processor(span_processor) # Span 프로세서 추가
+# # 템포에 데이터 전송을 위한 OLTP span Exporter
+# tempo_exporter = OTLPSpanExporter(endpoint="http://localhost:4318/v1/traces")
+# span_processor = BatchSpanProcessor(tempo_exporter)
+# trace_provider.add_span_processor(span_processor) # Span 프로세서 추가
 
-trace.set_tracer_provider(trace_provider)
+# trace.set_tracer_provider(trace_provider)
 
 FastAPIInstrumentor.instrument_app(app, excluded_urls="client/.*/health")
 instrumentator = Instrumentator()

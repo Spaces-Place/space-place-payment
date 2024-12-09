@@ -6,7 +6,6 @@ import httpx
 
 from enums.payment_type import PaymentStatus
 from models.payment import Payment
-from routers.logging_router import LoggingAPIRoute
 from schemas.common import BaseResponse
 from schemas.kakao_pay import KakaoPayApprove, KakaoPayReady
 from schemas.payment import PaymentApproveResponse, KakaoReadyRequest
@@ -22,7 +21,7 @@ from utils.service_url import ServiceUrlConfig
 from schemas.kakao_pay import KakaoPayFail
 
 
-payment_kafka_router = APIRouter(tags=["결제"], route_class=LoggingAPIRoute)
+payment_kafka_router = APIRouter(tags=["결제"])
 
 # 결제 요청
 @payment_kafka_router.post(
@@ -72,8 +71,8 @@ async def payment_ready(
             response_data=response.json()
             user_name=response_data.get("name")
 
-    except:
-        logger.error('회원 정보를 가져올 수 없습니다.')
+    except Exception as e:
+        logger.error(f'회원 정보를 가져올 수 없습니다: {e}')
         raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="결제 중 오류가 발생했습니다.",
@@ -100,8 +99,8 @@ async def payment_ready(
             space_name=response_data.get("space_name")
             total_amount=response_data.get("total_amount")
             quantity=response_data.get("quantity")
-    except:
-        logger.error('공간 정보를 가져올 수 없습니다.')
+    except Exception as e:
+        logger.error(f'공간 정보를 가져올 수 없습니다: {e}')
         raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="결제 중 오류가 발생했습니다.",
@@ -128,8 +127,8 @@ async def payment_ready(
             response.raise_for_status()
             response_data=response.json()
             order_number=response_data.get("order_number")
-    except:
-        logger.error('예약 번호를 가져올 수 없습니다.')
+    except Exception as e:
+        logger.error(f'예약 번호를 가져올 수 없습니다: {e}')
         raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="결제 중 오류가 발생했습니다.",
@@ -284,8 +283,8 @@ async def payment_approve(
             amount = approval_result.get("amount").get("total")
 
             logger.info(f'카카오 결제 승인 완료: {approval_result}')
-    except:
-        logger.error('카카오 결제 승인 요청에 실패했습니다.')
+    except Exception as e:
+        logger.error(f'카카오 결제 승인 요청에 실패했습니다:{e}')
         raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="결제 중 오류가 발생했습니다.",
@@ -394,9 +393,8 @@ async def payment_approve(
             )
             response.raise_for_status()
             logger.info('예약 상태 CANCELED 업데이트 성공')
-    except:
-        logger.error(f'예약 상태 CANCELED 업데이트 실패')
-        logger.error(f"{reservation_url}/reservations/kakao/approve")
+    except Exception as e:
+        logger.error(f'예약 상태 CANCELED 업데이트 실패: {e}')
         raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="결제 중 오류가 발생했습니다.",
