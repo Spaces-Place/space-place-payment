@@ -13,7 +13,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         logger = Logger.setup_logger()
 
-        ignore_log_list = ['/metrics']
+        ignore_log_list = ["/metrics"]
 
         logger.info(f"요청 URL: {request.method} {request.url.path}")
         logger.info(f"요청 헤더: {request.headers}")
@@ -25,14 +25,14 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         try:
             # 응답 가로채기를 위한 send 래퍼
             response_body = []
-            
+
             async def send_wrapper(message: Message) -> None:
                 if message.get("type") == "http.response.body":
                     response_body.append(message.get("body", b""))
 
             # 다음 미들웨어/라우터 호출
             response = await call_next(request)
-            
+
             # 응답 로그
             logger.info(f"응답 상태 코드: {response.status_code}")
 
@@ -45,7 +45,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             # 로깅을 위해 응답 본문 기록
             if str(response.status_code).startswith("2"):
                 try:
-                    body_str = body.decode('utf-8')
+                    body_str = body.decode("utf-8")
                     logger.info(f"응답 본문: {body_str}")
                 except Exception as e:
                     logger.error(f"에러 발생:{e}")
@@ -55,26 +55,22 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                     content=body,
                     status_code=response.status_code,
                     headers=dict(response.headers),
-                    media_type=response.media_type or 'application/json'
+                    media_type=response.media_type or "application/json",
                 )
-            
+
             raise HTTPException(
                 status_code=response.status_code,
-                detail=json.loads(body.decode('utf-8'))["detail"],
+                detail=json.loads(body.decode("utf-8"))["detail"],
             )
 
         except HTTPException as http_exception:
             error_response = {"detail": http_exception.detail}
             logger.error(f"HTTP 에러 발생: {http_exception.detail}", exc_info=True)
             return JSONResponse(
-                content=error_response,
-                status_code=http_exception.status_code
+                content=error_response, status_code=http_exception.status_code
             )
 
         except Exception as e:
-            error_response = {"detail": str(e)} # TODO 내부 에러 발생으로 변경해야함
+            error_response = {"detail": str(e)}  # TODO 내부 에러 발생으로 변경해야함
             logger.error(f"내부 에러 발생: {str(e)}", exc_info=True)
-            return JSONResponse(
-                content=error_response,
-                status_code=500
-            )
+            return JSONResponse(content=error_response, status_code=500)
