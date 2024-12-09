@@ -112,6 +112,7 @@ class KafkaConfig:
         self._logger.info("Starting Kafka consumers...")
 
         while self._running:
+            self._logger.info("컨슈머 컨슈밍...")
             for topic, consumer in self.consumers.items():
                 try:
                     msg = consumer.poll(1.0)
@@ -120,6 +121,8 @@ class KafkaConfig:
                     if msg.error():
                         self._logger.error(f"메세지 소비 에러: {msg.error()}")
                         continue
+                    
+                    self._logger.info(f"토픽:{topic}, 메세지: {msg}")
                     
                     # 처리 로직
                     value = json.loads(msg.value().decode('utf-8'))
