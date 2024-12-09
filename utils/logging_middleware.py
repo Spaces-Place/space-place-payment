@@ -13,6 +13,8 @@ class LoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         logger = Logger.setup_logger()
 
+        ignore_log_list = ['/metrics']
+
         logger.info(f"요청 URL: {request.method} {request.url.path}")
         logger.info(f"요청 헤더: {request.headers}")
 
