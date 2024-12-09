@@ -6,6 +6,7 @@ from fastapi import Depends, FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from prometheus_fastapi_instrumentator import Instrumentator
+
 # from opentelemetry import trace
 # from opentelemetry.sdk.trace import TracerProvider
 # from opentelemetry.sdk.trace.export import BatchSpanProcessor
@@ -27,12 +28,17 @@ async def start_payment_consumers():
     payment_service = PaymentService(kafka_config, logger)
     await payment_service.initialize_consumers()
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """애플리케이션 시작될 때 실행할 코드"""
-    
+
     # 환경 설정
-    env_type = '.env.development' if os.getenv('APP_ENV') == 'development' else '.env.production'
+    env_type = (
+        ".env.development"
+        if os.getenv("APP_ENV") == "development"
+        else ".env.production"
+    )
     load_dotenv(env_type)
 
     # DB 설정
@@ -42,7 +48,7 @@ async def lifespan(app: FastAPI):
     consumer_task = asyncio.create_task(start_payment_consumers())
 
     yield
-    
+
     """애플리케이션 종료될 때 실행할 코드 (필요 시 추가)"""
     consumer_task.cancel()
     await asyncio.gather(consumer_task, return_exceptions=True)
@@ -54,12 +60,14 @@ app.add_middleware(LoggingMiddleware)
 
 app.include_router(payment_kafka_router, prefix="/api/v1/payments")
 
+
 @app.get("/health", status_code=status.HTTP_200_OK)
 async def health_check(logger: Logger = Depends(Logger.setup_logger)) -> dict:
     # with trace.get_tracer(__name__).start_as_current_span("health check") as span:
     #     span.set_attribute("item_id", "123")
-    logger.info('health check')
-    return {"status" : "ok"}
+    logger.info("health check")
+    return {"status": "ok"}
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -83,7 +91,7 @@ app.add_middleware(
 
 FastAPIInstrumentor.instrument_app(app, excluded_urls="client/.*/health")
 instrumentator = Instrumentator()
-instrumentator.instrument(app).expose(app) # 메트릭(/metrics) 노출
+instrumentator.instrument(app).expose(app)  # 메트릭(/metrics) 노출
 
 
 if __name__ == "__main__":
